@@ -9,4 +9,6 @@ public interface IVehicleRepository
     Task AddAsync(Vehicle vehicle, CancellationToken ct = default);
     Task UpdateAsync(Vehicle vehicle, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<(IReadOnlyList<Vehicle> Items, int TotalCount)> GetAllAsync(int page, int pageSize, CancellationToken ct = default);
+    Task<(IReadOnlyList<Vehicle> Items, int TotalCount)> GetByClientAsync(Guid clientId, int page, int pageSize, CancellationToken ct = default);
 }
