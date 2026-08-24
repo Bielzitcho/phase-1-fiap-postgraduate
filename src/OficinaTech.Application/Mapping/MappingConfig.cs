@@ -14,5 +14,9 @@ public static class MappingConfig
         TypeAdapterConfig<Client, ClientResponse>.NewConfig()
             .Map(dest => dest.TaxId, src => src.TaxId.Value)
             .Map(dest => dest.TaxIdType, src => src.TaxId.Type.ToString());
+
+        // Explicit rule: LicensePlate VO to string (Pitfall 4 — auto-map fails on nested .Value)
+        TypeAdapterConfig<Vehicle, VehicleResponse>.NewConfig()
+            .Map(dest => dest.LicensePlate, src => src.LicensePlate.Value);
     }
 }
