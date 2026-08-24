@@ -1,0 +1,31 @@
+{
+  "worktree": {
+    "baseRef": "head"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "WebSearch",
+      "Bash(node *)",
+      "WebFetch(domain:workshopsoftware.com)",
+      "WebFetch(domain:www.autosoftway.com)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(dotnet --version)",
+      "Bash(dotnet --list-sdks)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Skill(gsd-execute-phase)",
+      "Read(//usr/local/share/dotnet/sdk/**)",
+      "Read(//usr/local/dotnet/**)",
+      "Read(//usr/local/**)",
+      "Bash(/usr/local/share/dotnet/x64/dotnet --list-sdks)",
+      "Bash(/usr/local/share/dotnet/x64/dotnet --version)",
+      "Bash(dotnet new *)",
+      "Bash(dotnet sln *)",
+      "Bash(cd *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet *)"
+    ]
+  }
+}
