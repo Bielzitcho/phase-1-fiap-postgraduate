@@ -94,6 +94,8 @@ O cliente consegue abrir uma OS, receber um orçamento, aprovar serviços adicio
 | PostgreSQL | Dados altamente relacionais (OS → cliente → veículo → serviços → peças); transações garantem consistência do estoque | — Pending |
 | Arquitetura em camadas (Domain / Application / Infrastructure / API) | Alinha com DDD conforme exigido; viável para MVP sem overhead de microserviços | — Pending |
 | JWT para autenticação admin | Requisito explícito do desafio | — Pending |
+| Entidades ricas (Rich Domain Model) | Entidades possuem comportamento encapsulado (métodos de negócio, setters privados); nenhum setter público expõe estado interno — obrigatório para DDD correto e avaliação acadêmica | — Pending |
+| Result Pattern | Operações de domínio e aplicação retornam `Result<T>` em vez de lançar exceções para erros de negócio — permite fluxo de erro explícito e testável sem try/catch no controller | — Pending |
 
 ## Evolution
 
