@@ -1,0 +1,8 @@
+bin/
+obj/
+.git/
+.planning/
+.gsd/
+.config/
+*.md
+!**/appsettings*.json
