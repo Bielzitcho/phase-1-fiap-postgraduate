@@ -9,8 +9,9 @@ public class Client : AggregateRoot<Guid>
     public TaxId TaxId { get; private set; }
     public string Email { get; private set; }
     public string Phone { get; private set; }
+    public string Address { get; private set; }
 
-    public Client(string name, TaxId taxId, string email, string phone)
+    public Client(string name, TaxId taxId, string email, string phone, string address)
         : base(Guid.NewGuid())
     {
         Name = !string.IsNullOrWhiteSpace(name)
@@ -21,15 +22,28 @@ public class Client : AggregateRoot<Guid>
             ? email
             : throw new DomainException("Email cannot be empty.");
         Phone = phone ?? string.Empty;
+        Address = !string.IsNullOrWhiteSpace(address)
+            ? address
+            : throw new DomainException("Address cannot be empty.");
     }
 
     private Client() : base() { }
 
-    public void UpdateContactInfo(string email, string phone)
+    public void UpdateName(string name)
+    {
+        Name = !string.IsNullOrWhiteSpace(name)
+            ? name
+            : throw new DomainException("Client name cannot be empty.");
+    }
+
+    public void UpdateContactInfo(string email, string phone, string address)
     {
         Email = !string.IsNullOrWhiteSpace(email)
             ? email
             : throw new DomainException("Email cannot be empty.");
         Phone = phone ?? string.Empty;
+        Address = !string.IsNullOrWhiteSpace(address)
+            ? address
+            : throw new DomainException("Address cannot be empty.");
     }
 }

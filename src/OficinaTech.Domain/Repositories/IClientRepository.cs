@@ -9,4 +9,5 @@ public interface IClientRepository
     Task AddAsync(Client client, CancellationToken ct = default);
     Task UpdateAsync(Client client, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<(IReadOnlyList<Client> Items, int TotalCount)> GetAllAsync(int page, int pageSize, CancellationToken ct = default);
 }

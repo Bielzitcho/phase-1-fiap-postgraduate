@@ -13,7 +13,7 @@ public class ClientVehicleTests
     public void Client_WithValidArguments_ShouldConstruct()
     {
         var taxId = ValidTaxId();
-        var client = new Client("John Doe", taxId, "john@example.com", "11999999999");
+        var client = new Client("John Doe", taxId, "john@example.com", "11999999999", "Rua A, 1");
         Assert.Equal("John Doe", client.Name);
         Assert.Equal(taxId, client.TaxId);
         Assert.Equal("john@example.com", client.Email);
@@ -24,14 +24,14 @@ public class ClientVehicleTests
     public void Client_WithEmptyName_ShouldThrowDomainException()
     {
         Assert.Throws<DomainException>(() =>
-            new Client("", ValidTaxId(), "john@example.com", "11999999999"));
+            new Client("", ValidTaxId(), "john@example.com", "11999999999", "Rua A, 1"));
     }
 
     [Fact]
     public void Client_WithNullTaxId_ShouldThrowDomainException()
     {
         Assert.Throws<DomainException>(() =>
-            new Client("John Doe", null!, "john@example.com", "11999999999"));
+            new Client("John Doe", null!, "john@example.com", "11999999999", "Rua A, 1"));
     }
 
     [Fact]
