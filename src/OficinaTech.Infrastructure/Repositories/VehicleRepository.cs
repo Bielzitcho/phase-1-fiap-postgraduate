@@ -19,24 +19,44 @@ public class VehicleRepository : IVehicleRepository
         => await _db.Vehicles.FirstOrDefaultAsync(v => v.LicensePlate == new LicensePlate(plate), ct);
 
     public async Task AddAsync(Vehicle vehicle, CancellationToken ct = default)
-    {
-        await _db.Vehicles.AddAsync(vehicle, ct);
-        await _db.SaveChangesAsync(ct);
-    }
+        => await _db.Vehicles.AddAsync(vehicle, ct);
 
-    public async Task UpdateAsync(Vehicle vehicle, CancellationToken ct = default)
+    public Task UpdateAsync(Vehicle vehicle, CancellationToken ct = default)
     {
         _db.Vehicles.Update(vehicle);
-        await _db.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var vehicle = await _db.Vehicles.FindAsync([id], ct);
         if (vehicle is not null)
-        {
             _db.Vehicles.Remove(vehicle);
-            await _db.SaveChangesAsync(ct);
-        }
+    }
+
+    public async Task<(IReadOnlyList<Vehicle> Items, int TotalCount)> GetAllAsync(
+        int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _db.Vehicles.AsQueryable();
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(v => v.LicensePlate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, total);
+    }
+
+    public async Task<(IReadOnlyList<Vehicle> Items, int TotalCount)> GetByClientAsync(
+        Guid clientId, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _db.Vehicles.Where(v => v.ClientId == clientId);
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(v => v.LicensePlate)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, total);
     }
 }

@@ -14,6 +14,7 @@ public class PartConfiguration : IEntityTypeConfiguration<Part>
         builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
         builder.Property(p => p.UnitPrice).HasColumnType("numeric(10,2)").IsRequired();
         builder.Property(p => p.StockQuantity).IsRequired();
+        builder.Property(p => p.Description).HasMaxLength(1000);
 
         // AggregateRoot._domainEvents — never persisted
         builder.Ignore(p => p.DomainEvents);

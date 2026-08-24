@@ -22,24 +22,18 @@ public class ServiceOrderRepository : IServiceOrderRepository
         => await _db.ServiceOrders.Where(o => o.Status == status).ToListAsync(ct);
 
     public async Task AddAsync(ServiceOrder serviceOrder, CancellationToken ct = default)
-    {
-        await _db.ServiceOrders.AddAsync(serviceOrder, ct);
-        await _db.SaveChangesAsync(ct);
-    }
+        => await _db.ServiceOrders.AddAsync(serviceOrder, ct);
 
-    public async Task UpdateAsync(ServiceOrder serviceOrder, CancellationToken ct = default)
+    public Task UpdateAsync(ServiceOrder serviceOrder, CancellationToken ct = default)
     {
         _db.ServiceOrders.Update(serviceOrder);
-        await _db.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var serviceOrder = await _db.ServiceOrders.FindAsync([id], ct);
         if (serviceOrder is not null)
-        {
             _db.ServiceOrders.Remove(serviceOrder);
-            await _db.SaveChangesAsync(ct);
-        }
     }
 }

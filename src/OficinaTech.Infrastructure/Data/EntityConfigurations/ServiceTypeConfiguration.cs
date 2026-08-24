@@ -13,6 +13,7 @@ public class ServiceTypeConfiguration : IEntityTypeConfiguration<ServiceType>
 
         builder.Property(s => s.Name).HasMaxLength(200).IsRequired();
         builder.Property(s => s.BasePrice).HasColumnType("numeric(10,2)").IsRequired();
+        builder.Property(s => s.Description).HasMaxLength(1000);
 
         // Field-only properties: private accumulators with no public getter
         // Field names must exactly match ServiceType.cs lines 10-11

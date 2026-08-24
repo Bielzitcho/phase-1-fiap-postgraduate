@@ -14,28 +14,32 @@ public class ServiceTypeRepository : IServiceTypeRepository
     public async Task<ServiceType?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _db.ServiceTypes.FindAsync([id], ct);
 
-    public async Task<IReadOnlyList<ServiceType>> GetAllAsync(CancellationToken ct = default)
-        => await _db.ServiceTypes.ToListAsync(ct);
-
-    public async Task AddAsync(ServiceType serviceType, CancellationToken ct = default)
+    public async Task<(IReadOnlyList<ServiceType> Items, int TotalCount)> GetAllAsync(
+        int page, int pageSize, CancellationToken ct = default)
     {
-        await _db.ServiceTypes.AddAsync(serviceType, ct);
-        await _db.SaveChangesAsync(ct);
+        var query = _db.ServiceTypes.AsQueryable();
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderBy(s => s.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, total);
     }
 
-    public async Task UpdateAsync(ServiceType serviceType, CancellationToken ct = default)
+    public async Task AddAsync(ServiceType serviceType, CancellationToken ct = default)
+        => await _db.ServiceTypes.AddAsync(serviceType, ct);
+
+    public Task UpdateAsync(ServiceType serviceType, CancellationToken ct = default)
     {
         _db.ServiceTypes.Update(serviceType);
-        await _db.SaveChangesAsync(ct);
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var serviceType = await _db.ServiceTypes.FindAsync([id], ct);
         if (serviceType is not null)
-        {
             _db.ServiceTypes.Remove(serviceType);
-            await _db.SaveChangesAsync(ct);
-        }
     }
 }
