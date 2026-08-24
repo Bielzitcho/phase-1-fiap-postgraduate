@@ -2,10 +2,14 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using OficinaTech.Application.Interfaces;
+using OficinaTech.Application.Mapping;
+using OficinaTech.Application.Services;
 using OficinaTech.Domain.Repositories;
 using OficinaTech.Infrastructure.Data;
 using OficinaTech.Infrastructure.Repositories;
 using OficinaTech.Infrastructure.Services;
+using OficinaTech.Presentation.Middleware;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +32,16 @@ builder.Services.AddScoped<IPartRepository, PartRepository>();
 builder.Services.AddScoped<IServiceOrderRepository, ServiceOrderRepository>();
 builder.Services.AddScoped<AdminCredentialService>();
 
+// Unit of Work
+builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+
+// Application services
+builder.Services.AddScoped<IClientService, ClientService>();
+
+// Global exception handler (D-05, D-06)
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // JWT Authentication (AUTH-01, AUTH-02)
 var jwtSecret = builder.Configuration["Admin:JwtSecret"]
     ?? throw new InvalidOperationException("Admin:JwtSecret is required.");
@@ -48,6 +62,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Mapster central mapping config — called before Build() (D-04)
+MappingConfig.Register();
+
 var app = builder.Build();
 
 // Auto-migration on startup (D-08)
@@ -58,6 +75,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Middleware pipeline — ORDER IS CRITICAL (Pitfall 5)
+app.UseExceptionHandler();   // FIRST — outermost catcher for DomainException
+
 app.MapOpenApi();
 app.MapScalarApiReference(); // INFRA-01: NOT inside IsDevelopment() — reachable in all environments
 
