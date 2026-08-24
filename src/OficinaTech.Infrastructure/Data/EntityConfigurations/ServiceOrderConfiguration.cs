@@ -44,6 +44,12 @@ public class ServiceOrderConfiguration : IEntityTypeConfiguration<ServiceOrder>
         builder.Navigation("_orderedParts")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        // OrderedServices/OrderedParts are the public IReadOnlyCollection wrappers over the private
+        // backing fields — EF maps the private fields directly; the public wrappers must be ignored
+        // to avoid a conflict ("member cannot use field X because it is already used by Y")
+        builder.Ignore(o => o.OrderedServices);
+        builder.Ignore(o => o.OrderedParts);
+
         // TotalAmount is computed from child collections — never persisted (RESEARCH.md Pitfall 2)
         builder.Ignore(o => o.TotalAmount);
 
