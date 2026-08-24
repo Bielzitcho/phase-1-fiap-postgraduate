@@ -1,1 +1,16 @@
 .planning/
+
+# .NET build outputs
+bin/
+obj/
+
+# .NET tools & caches
+.dotnet/
+.nuget/
+*.user
+*.suo
+.vs/
+
+# Test results
+TestResults/
+coverage/
