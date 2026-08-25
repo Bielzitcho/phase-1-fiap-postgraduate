@@ -35,7 +35,9 @@ public class PartsController : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _service.GetAllAsync(page, pageSize, ct);
-        return Ok(result.Value);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : Problem(detail: result.Error, statusCode: 500);
     }
 
     [HttpPut("{id:guid}")]

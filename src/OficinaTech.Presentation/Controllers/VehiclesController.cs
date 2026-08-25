@@ -35,7 +35,9 @@ public class VehiclesController : ControllerBase
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _service.GetAllAsync(page, pageSize, ct);
-        return Ok(result.Value);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : Problem(detail: result.Error, statusCode: 500);
     }
 
     [HttpGet("/api/clients/{clientId:guid}/vehicles")]
@@ -43,7 +45,9 @@ public class VehiclesController : ControllerBase
         Guid clientId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var result = await _service.GetByClientAsync(clientId, page, pageSize, ct);
-        return Ok(result.Value);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : Problem(detail: result.Error, statusCode: 404);
     }
 
     [HttpPut("{id:guid}")]
