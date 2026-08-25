@@ -43,7 +43,9 @@ public class ClientService : IClientService
     public async Task<Result<PagedResult<ClientResponse>>> GetAllAsync(
         int page, int pageSize, CancellationToken ct = default)
     {
-        // D-12: cap pageSize to 100 silently (assumption A3)
+        // D-12: clamp pagination parameters to valid range
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 1;
         if (pageSize > 100) pageSize = 100;
         var (items, total) = await _repo.GetAllAsync(page, pageSize, ct);
         var dtos = items.Select(c => c.Adapt<ClientResponse>()).ToList();
