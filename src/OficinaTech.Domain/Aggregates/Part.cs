@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using OficinaTech.Domain.Seedwork;
 
 namespace OficinaTech.Domain.Aggregates;
@@ -6,6 +7,7 @@ public class Part : AggregateRoot<Guid>
 {
     public string Name { get; private set; }
     public decimal UnitPrice { get; private set; }
+    [ConcurrencyCheck]
     public int StockQuantity { get; private set; }
     public string? Description { get; private set; }
 
@@ -35,6 +37,14 @@ public class Part : AggregateRoot<Guid>
             ? stockQuantity
             : throw new DomainException("Stock quantity cannot be negative.");
         Description = description;
+    }
+
+    public void DecrementStock(int qty)
+    {
+        if (qty > StockQuantity)
+            throw new DomainException(
+                $"Insufficient stock for part '{Name}'. Available: {StockQuantity}, requested: {qty}.");
+        StockQuantity -= qty;
     }
 
     private Part() : base() { }
