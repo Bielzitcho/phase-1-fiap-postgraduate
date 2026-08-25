@@ -33,7 +33,7 @@ public class ServiceOrdersController : ControllerBase
         var result = await _service.GetAllAsync(status, clientId, page, pageSize, ct);
         return result.IsSuccess
             ? Ok(result.Value)
-            : Problem(detail: result.Error, statusCode: 500);
+            : Problem(detail: result.Error, statusCode: 400);
     }
 
     // D-13: public by-client status query (OS-12)
