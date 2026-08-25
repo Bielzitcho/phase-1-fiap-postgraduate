@@ -18,9 +18,12 @@ public class ClientsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateClientRequest req, CancellationToken ct)
     {
         var result = await _service.CreateAsync(req, ct);
-        return result.IsSuccess
-            ? CreatedAtAction(nameof(GetById), new { id = result.Value!.Id }, result.Value)
-            : Problem(detail: result.Error, statusCode: 404);
+        if (result.IsSuccess)
+            return CreatedAtAction(nameof(GetById), new { id = result.Value!.Id }, result.Value);
+        var statusCode = result.Error?.Contains("already exists", StringComparison.OrdinalIgnoreCase) == true
+            ? 409
+            : 400;
+        return Problem(detail: result.Error, statusCode: statusCode);
     }
 
     [HttpGet("{id:guid}")]

@@ -24,6 +24,12 @@ public class VehicleService : IVehicleService
         if (client is null)
             return Result<VehicleResponse>.Failure($"Client {req.ClientId} not found.");
 
+        // Uniqueness check before insert to avoid unhandled DbUpdateException on duplicate license plate
+        var normalizedPlate = req.LicensePlate?.Replace("-", "").Trim().ToUpperInvariant() ?? "";
+        var existingByPlate = await _repo.GetByLicensePlateAsync(normalizedPlate, ct);
+        if (existingByPlate is not null)
+            return Result<VehicleResponse>.Failure($"A vehicle with license plate '{req.LicensePlate}' already exists.");
+
         // LicensePlate VO validates format; DomainException propagates to global handler (D-06)
         var vehicle = new Vehicle(req.ClientId, new LicensePlate(req.LicensePlate), req.Make, req.Model, req.Year);
         await _repo.AddAsync(vehicle, ct);

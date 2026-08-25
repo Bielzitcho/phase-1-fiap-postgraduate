@@ -19,6 +19,12 @@ public class ClientService : IClientService
     public async Task<Result<ClientResponse>> CreateAsync(
         CreateClientRequest req, CancellationToken ct = default)
     {
+        // Uniqueness check before insert to avoid unhandled DbUpdateException on duplicate tax_id
+        var taxIdDigits = new string(req.TaxId.Where(char.IsDigit).ToArray());
+        var existing = await _repo.GetByTaxIdAsync(taxIdDigits, ct);
+        if (existing is not null)
+            return Result<ClientResponse>.Failure($"A client with TaxId '{req.TaxId}' already exists.");
+
         // Domain constructor validates TaxId via TaxId VO — DomainException propagates (D-06)
         var client = new Client(req.Name, new TaxId(req.TaxId), req.Email, req.Phone, req.Address);
         await _repo.AddAsync(client, ct);
