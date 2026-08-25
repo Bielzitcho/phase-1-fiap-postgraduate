@@ -40,6 +40,7 @@ builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IServiceTypeService, ServiceTypeService>();
 builder.Services.AddScoped<IPartService, PartService>();
+builder.Services.AddScoped<IServiceOrderService, ServiceOrderService>();
 
 // Global exception handler (D-05, D-06)
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
