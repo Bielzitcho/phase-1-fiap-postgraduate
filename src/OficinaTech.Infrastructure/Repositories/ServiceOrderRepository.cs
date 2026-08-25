@@ -15,6 +15,27 @@ public class ServiceOrderRepository : IServiceOrderRepository
     public async Task<ServiceOrder?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _db.ServiceOrders.FindAsync([id], ct);
 
+    public async Task<ServiceOrder?> GetByIdWithIncludesAsync(Guid id, CancellationToken ct = default)
+        => await _db.ServiceOrders
+            .Include(o => o.OrderedServices)
+            .Include(o => o.OrderedParts)
+            .FirstOrDefaultAsync(o => o.Id == id, ct);
+
+    public async Task<(IReadOnlyList<ServiceOrder> Items, int TotalCount)> GetAllAsync(
+        ServiceOrderStatus? status, Guid? clientId, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _db.ServiceOrders.AsQueryable();
+        if (status.HasValue) query = query.Where(o => o.Status == status.Value);
+        if (clientId.HasValue) query = query.Where(o => o.ClientId == clientId.Value);
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, total);
+    }
+
     public async Task<IReadOnlyList<ServiceOrder>> GetByClientIdAsync(Guid clientId, CancellationToken ct = default)
         => await _db.ServiceOrders.Where(o => o.ClientId == clientId).ToListAsync(ct);
 
