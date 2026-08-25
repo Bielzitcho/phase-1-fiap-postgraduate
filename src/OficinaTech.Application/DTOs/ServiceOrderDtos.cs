@@ -39,3 +39,11 @@ public record ClientSummary(Guid Id, string Name, string TaxId);
 public record VehicleSummary(Guid Id, string Plate, string Brand, string Model, int Year);
 public record OrderedServiceDto(Guid ServiceTypeId, string Name, decimal UnitPrice);
 public record OrderedPartDto(Guid PartId, string Name, decimal UnitPrice, int Quantity);
+
+// D-13: reduced public summary — never exposes full detail or client PII
+public record PublicServiceOrderSummary(
+    Guid Id,
+    string Status,
+    decimal TotalAmount,
+    DateTime CreatedAt,
+    string VehiclePlate);

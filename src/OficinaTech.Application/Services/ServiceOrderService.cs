@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using OficinaTech.Application.DTOs;
 using OficinaTech.Application.Interfaces;
 using OficinaTech.Domain.Aggregates;
+using OficinaTech.Domain.Enums;
 using OficinaTech.Domain.Repositories;
 using OficinaTech.Domain.Seedwork;
 
@@ -93,6 +94,57 @@ public class ServiceOrderService : IServiceOrderService
 
         var response = ProjectResponse(order, client, vehicle);
         return Result<ServiceOrderResponse>.Success(response);
+    }
+
+    // -----------------------------------------------------------------------
+    // Query endpoints (D-12, D-13)
+    // -----------------------------------------------------------------------
+
+    // D-12: admin filtered paged list (OS-10)
+    public async Task<Result<PagedResult<ServiceOrderSummaryResponse>>> GetAllAsync(
+        ServiceOrderStatus? status, Guid? clientId, int page, int pageSize, CancellationToken ct = default)
+    {
+        // Clamp page and pageSize using the PartService pattern
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 1;
+        if (pageSize > 100) pageSize = 100;
+
+        var (items, total) = await _repo.GetAllAsync(status, clientId, page, pageSize, ct);
+        var dtos = items.Select(ProjectSummary).ToList();
+        return Result<PagedResult<ServiceOrderSummaryResponse>>.Success(
+            new PagedResult<ServiceOrderSummaryResponse>(dtos, total, page, pageSize));
+    }
+
+    // D-13: public status query keyed by taxId (OS-12)
+    public async Task<Result<IReadOnlyList<PublicServiceOrderSummary>>> GetByTaxIdAsync(
+        string taxId, CancellationToken ct = default)
+    {
+        // Normalize taxId — strip non-digit chars so "529.982.247-25" == "52998224725"
+        var normalizedTaxId = Regex.Replace(taxId ?? string.Empty, @"\D", "");
+
+        var client = await _clientRepo.GetByTaxIdAsync(normalizedTaxId, ct);
+        if (client is null)
+            return Result<IReadOnlyList<PublicServiceOrderSummary>>.Failure(
+                $"Client with taxId {taxId} not found.");
+
+        // Fetch client's orders — use page=1, pageSize=100 (reasonable max for a single client)
+        var (orders, _) = await _repo.GetAllAsync(null, client.Id, 1, 100, ct);
+
+        // Project to reduced public summary — resolve vehicle plate per order
+        var summaries = new List<PublicServiceOrderSummary>(orders.Count);
+        foreach (var order in orders)
+        {
+            var vehicle = await _vehicleRepo.GetByIdAsync(order.VehicleId, ct);
+            var plate = vehicle?.LicensePlate.Value ?? string.Empty;
+            summaries.Add(new PublicServiceOrderSummary(
+                order.Id,
+                order.Status.ToString(),
+                order.TotalAmount,
+                order.CreatedAt,
+                plate));
+        }
+
+        return Result<IReadOnlyList<PublicServiceOrderSummary>>.Success(summaries.AsReadOnly());
     }
 
     // -----------------------------------------------------------------------

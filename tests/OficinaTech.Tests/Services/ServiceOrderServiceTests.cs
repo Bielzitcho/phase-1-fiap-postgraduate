@@ -488,4 +488,137 @@ public class ServiceOrderServiceTests
         Assert.Equal(part.UnitPrice * 2, result.Value.TotalAmount);
         await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
+
+    // -----------------------------------------------------------------------
+    // GetAllAsync — clamps pageSize >100 to 100 and forwards filters to repo (D-12, OS-10)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetAllAsync_WithPageSizeOver100_ClampsTo100AndForwardsFilters()
+    {
+        var status = ServiceOrderStatus.Recebida;
+        var clientId = Guid.NewGuid();
+
+        _repo.GetAllAsync(status, clientId, 1, 100, Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<ServiceOrder>)[], 0));
+
+        var result = await _service.GetAllAsync(status, clientId, 1, 200);
+
+        Assert.True(result.IsSuccess);
+        // Verify repo received the clamped pageSize=100 and unaltered filters
+        await _repo.Received(1).GetAllAsync(status, clientId, 1, 100, Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // GetAllAsync — page <1 clamped to 1 (D-12)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetAllAsync_WithPageBelow1_ClampsTo1()
+    {
+        _repo.GetAllAsync(null, null, 1, 20, Arg.Any<CancellationToken>())
+            .Returns(((IReadOnlyList<ServiceOrder>)[], 0));
+
+        var result = await _service.GetAllAsync(null, null, -5, 20);
+
+        Assert.True(result.IsSuccess);
+        await _repo.Received(1).GetAllAsync(null, null, 1, 20, Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // GetAllAsync — maps items to ServiceOrderSummaryResponse and returns correct TotalCount (D-12)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetAllAsync_WithItems_MapsToSummaryResponseAndReturnsCorrectTotalCount()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+        var orders = (IReadOnlyList<ServiceOrder>)[order];
+
+        _repo.GetAllAsync(null, null, 1, 20, Arg.Any<CancellationToken>())
+            .Returns((orders, 1));
+
+        var result = await _service.GetAllAsync(null, null, 1, 20);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, result.Value!.TotalCount);
+        Assert.Single(result.Value.Items);
+        Assert.Equal(order.Id, result.Value.Items[0].Id);
+        Assert.Equal("Recebida", result.Value.Items[0].Status);
+    }
+
+    // -----------------------------------------------------------------------
+    // GetByTaxIdAsync — client not found returns Failure with "not found" (D-13, OS-12)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetByTaxIdAsync_WhenClientNotFound_ReturnsFailureWithNotFoundMessage()
+    {
+        _clientRepo.GetByTaxIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((Client?)null);
+
+        var result = await _service.GetByTaxIdAsync(ValidCpf);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // -----------------------------------------------------------------------
+    // GetByTaxIdAsync — client exists, returns list of PublicServiceOrderSummary (D-13)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetByTaxIdAsync_WhenClientExists_ReturnsPublicSummaryListWithVehiclePlate()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+        var orders = (IReadOnlyList<ServiceOrder>)[order];
+
+        _clientRepo.GetByTaxIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(client);
+        _repo.GetAllAsync(null, client.Id, 1, 100, Arg.Any<CancellationToken>())
+            .Returns((orders, 1));
+        _vehicleRepo.GetByIdAsync(order.VehicleId, Arg.Any<CancellationToken>())
+            .Returns(vehicle);
+
+        var result = await _service.GetByTaxIdAsync(ValidCpf);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!);
+        var summary = result.Value![0];
+        Assert.Equal(order.Id, summary.Id);
+        Assert.Equal("Recebida", summary.Status);
+        Assert.Equal(order.TotalAmount, summary.TotalAmount);
+        Assert.Equal(vehicle.LicensePlate.Value, summary.VehiclePlate);
+        // The summary must be PublicServiceOrderSummary — not the full shape
+        Assert.IsType<PublicServiceOrderSummary>(summary);
+    }
+
+    // -----------------------------------------------------------------------
+    // GetByTaxIdAsync — taxId normalization: formatted CPF resolves same as digits-only (D-13)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetByTaxIdAsync_WithFormattedTaxId_NormalizesAndResolvesCorrectClient()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var orders = (IReadOnlyList<ServiceOrder>)Array.Empty<ServiceOrder>();
+
+        // Return the client for ANY normalized lookup — service must strip non-digits
+        _clientRepo.GetByTaxIdAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(client);
+        _repo.GetAllAsync(null, client.Id, 1, 100, Arg.Any<CancellationToken>())
+            .Returns((orders, 0));
+
+        // Call with formatted CPF — "529.982.247-25"
+        var result = await _service.GetByTaxIdAsync(ValidCpf);
+
+        Assert.True(result.IsSuccess);
+        // The repo should have been called with the digits-only normalized string
+        await _clientRepo.Received(1).GetByTaxIdAsync(ValidCpfDigitsOnly, Arg.Any<CancellationToken>());
+    }
 }
