@@ -4,7 +4,9 @@ using OficinaTech.Application.Interfaces;
 using OficinaTech.Application.Mapping;
 using OficinaTech.Application.Services;
 using OficinaTech.Domain.Aggregates;
+using OficinaTech.Domain.Enums;
 using OficinaTech.Domain.Repositories;
+using OficinaTech.Domain.Seedwork;
 using OficinaTech.Domain.ValueObjects;
 using Xunit;
 
@@ -21,6 +23,7 @@ public class ServiceOrderServiceTests
     private readonly ServiceOrderService _service;
 
     private const string ValidCpf = "529.982.247-25";
+    private const string ValidCpfDigitsOnly = "52998224725";
 
     public ServiceOrderServiceTests()
     {
@@ -62,6 +65,27 @@ public class ServiceOrderServiceTests
 
     private static Part MakePart()
         => new Part("Filtro de oleo", 50m, 100, "Filtro original");
+
+    /// <summary>
+    /// Creates a ServiceOrder in the specified status by calling the transition
+    /// chain via internal aggregate methods. Needed for tests that require a
+    /// specific starting status.
+    /// </summary>
+    private static ServiceOrder MakeOrderInStatus(Guid clientId, Guid vehicleId, ServiceOrderStatus targetStatus)
+    {
+        var order = new ServiceOrder(clientId, vehicleId);
+        if (targetStatus == ServiceOrderStatus.Recebida) return order;
+        order.StartDiagnosis();
+        if (targetStatus == ServiceOrderStatus.EmDiagnostico) return order;
+        order.SendForApproval();
+        if (targetStatus == ServiceOrderStatus.AguardandoAprovacao) return order;
+        order.Approve();
+        if (targetStatus == ServiceOrderStatus.EmExecucao) return order;
+        order.Finalize();
+        if (targetStatus == ServiceOrderStatus.Finalizada) return order;
+        order.MarkDelivered();
+        return order;
+    }
 
     // -----------------------------------------------------------------------
     // CreateAsync — success path
@@ -225,5 +249,243 @@ public class ServiceOrderServiceTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // -----------------------------------------------------------------------
+    // StartDiagnosisAsync — transitions from Recebida to EmDiagnostico (OS-09)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task StartDiagnosisAsync_OnRecebidaOrder_TransitionsToEmDiagnosticoAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _service.StartDiagnosisAsync(order.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("EmDiagnostico", result.Value!.Status);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StartDiagnosisAsync_OnWrongStatusOrder_ThrowsDomainException()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        // Order already in EmDiagnostico — cannot start diagnosis again
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.EmDiagnostico);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        // DomainException should bubble to the global handler (400)
+        await Assert.ThrowsAsync<DomainException>(() => _service.StartDiagnosisAsync(order.Id));
+    }
+
+    // -----------------------------------------------------------------------
+    // SendForApprovalAsync — transitions from EmDiagnostico to AguardandoAprovacao (OS-06)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task SendForApprovalAsync_OnEmDiagnosticoOrder_TransitionsToAguardandoAprovacaoAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.EmDiagnostico);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _service.SendForApprovalAsync(order.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("AguardandoAprovacao", result.Value!.Status);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // ApproveAsync — taxId mismatch returns Failure with "does not match" (D-05)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task ApproveAsync_WithMismatchedTaxId_ReturnsFailureWithDoesNotMatchMessage_AndNoCommit()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.AguardandoAprovacao);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _clientRepo.GetByIdAsync(client.Id, Arg.Any<CancellationToken>())
+            .Returns(client);
+
+        var req = new ApproveServiceOrderRequest(TaxId: "111.111.111-11");
+
+        var result = await _service.ApproveAsync(order.Id, req);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("does not match", result.Error, StringComparison.OrdinalIgnoreCase);
+        await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // ApproveAsync — matching taxId calls Approve(), DecrementStock, commits once (D-06)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task ApproveAsync_WithMatchingTaxId_ApprovesAndDecrementsStockAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var part = MakePart();
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+        order.AddPart(part.Id, part.Name, part.UnitPrice, 3);
+        order.StartDiagnosis();
+        order.SendForApproval();
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _clientRepo.GetByIdAsync(client.Id, Arg.Any<CancellationToken>())
+            .Returns(client);
+        _partRepo.GetByIdAsync(part.Id, Arg.Any<CancellationToken>())
+            .Returns(part);
+
+        // Use the exact digits-only string to match client.TaxId.Value
+        var req = new ApproveServiceOrderRequest(TaxId: ValidCpf);
+
+        var result = await _service.ApproveAsync(order.Id, req);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("EmExecucao", result.Value!.Status);
+        // Stock should have been decremented: 100 - 3 = 97
+        Assert.Equal(97, part.StockQuantity);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // ApproveAsync — insufficient stock lets DomainException bubble (no commit) (D-06)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task ApproveAsync_WhenPartHasInsufficientStock_ThrowsDomainException_AndNoCommit()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        // Create part with only 1 unit in stock
+        var part = new Part("Filtro especial", 80m, 1, null);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+        // Add 5 units of a part with only 1 in stock
+        order.AddPart(part.Id, part.Name, part.UnitPrice, 5);
+        order.StartDiagnosis();
+        order.SendForApproval();
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _clientRepo.GetByIdAsync(client.Id, Arg.Any<CancellationToken>())
+            .Returns(client);
+        _partRepo.GetByIdAsync(part.Id, Arg.Any<CancellationToken>())
+            .Returns(part);
+
+        var req = new ApproveServiceOrderRequest(TaxId: ValidCpf);
+
+        await Assert.ThrowsAsync<DomainException>(() => _service.ApproveAsync(order.Id, req));
+        await _uow.DidNotReceive().CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // FinalizeAsync — calls RecordExecution for each service and commits once (SRV-06, D-10)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task FinalizeAsync_OnEmExecucaoOrder_CallsRecordExecutionForEachServiceAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var serviceType = MakeServiceType();
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+        order.AddService(serviceType.Id, serviceType.Name, serviceType.BasePrice);
+        order.StartDiagnosis();
+        order.SendForApproval();
+        order.Approve();
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _serviceTypeRepo.GetByIdAsync(serviceType.Id, Arg.Any<CancellationToken>())
+            .Returns(serviceType);
+
+        var result = await _service.FinalizeAsync(order.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Finalizada", result.Value!.Status);
+        // RecordExecution increments _executionCount — AverageExecutionTime is no longer zero
+        Assert.NotEqual(TimeSpan.Zero, serviceType.AverageExecutionTime);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // AddServiceAsync — loads ServiceType, calls order.AddService, commits once (D-04)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task AddServiceAsync_OnRecebidaOrder_AddsServiceAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var serviceType = MakeServiceType();
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _clientRepo.GetByIdAsync(client.Id, Arg.Any<CancellationToken>())
+            .Returns(client);
+        _vehicleRepo.GetByIdAsync(vehicle.Id, Arg.Any<CancellationToken>())
+            .Returns(vehicle);
+        _serviceTypeRepo.GetByIdAsync(serviceType.Id, Arg.Any<CancellationToken>())
+            .Returns(serviceType);
+
+        var req = new AddServiceRequest(ServiceTypeId: serviceType.Id);
+
+        var result = await _service.AddServiceAsync(order.Id, req);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.OrderedServices);
+        Assert.Equal(serviceType.BasePrice, result.Value.TotalAmount);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // AddPartAsync — loads Part, calls order.AddPart, commits once (D-04)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task AddPartAsync_OnRecebidaOrder_AddsPartAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var part = MakePart();
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _clientRepo.GetByIdAsync(client.Id, Arg.Any<CancellationToken>())
+            .Returns(client);
+        _vehicleRepo.GetByIdAsync(vehicle.Id, Arg.Any<CancellationToken>())
+            .Returns(vehicle);
+        _partRepo.GetByIdAsync(part.Id, Arg.Any<CancellationToken>())
+            .Returns(part);
+
+        var req = new AddPartRequest(PartId: part.Id, Quantity: 2);
+
+        var result = await _service.AddPartAsync(order.Id, req);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.OrderedParts);
+        Assert.Equal(part.UnitPrice * 2, result.Value.TotalAmount);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 }
