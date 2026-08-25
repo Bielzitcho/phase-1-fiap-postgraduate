@@ -137,6 +137,23 @@ public class PartServiceTests
         await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 
+    // PUT semantics: omitting Description from the request body clears the existing value.
+    // This is intentional full-replacement behavior — callers must supply Description
+    // to preserve it. Use PATCH for partial updates if needed in the future.
+    [Fact]
+    public async Task UpdateAsync_WithNullDescription_ClearsExistingDescription()
+    {
+        var part = MakePart(); // created with "NGK iridium"
+        _repo.GetByIdAsync(part.Id, Arg.Any<CancellationToken>()).Returns(part);
+
+        // Omitting Description (null) — PUT full-replacement semantics clear the field
+        var req = new UpdatePartRequest("Spark Plug", 15.99m, 50, null);
+        var result = await _service.UpdateAsync(part.Id, req);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value!.Description);
+    }
+
     // -----------------------------------------------------------------------
     // DeleteAsync
     // -----------------------------------------------------------------------

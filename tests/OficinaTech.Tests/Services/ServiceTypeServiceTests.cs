@@ -135,6 +135,23 @@ public class ServiceTypeServiceTests
         await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
     }
 
+    // PUT semantics: omitting Description from the request body clears the existing value.
+    // This is intentional full-replacement behavior — callers must supply Description
+    // to preserve it. Use PATCH for partial updates if needed in the future.
+    [Fact]
+    public async Task UpdateAsync_WithNullDescription_ClearsExistingDescription()
+    {
+        var st = MakeServiceType(); // created with "Full synthetic oil change"
+        _repo.GetByIdAsync(st.Id, Arg.Any<CancellationToken>()).Returns(st);
+
+        // Omitting Description (null) — PUT full-replacement semantics clear the field
+        var req = new UpdateServiceTypeRequest("Oil Change", 100m, null);
+        var result = await _service.UpdateAsync(st.Id, req);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value!.Description);
+    }
+
     // -----------------------------------------------------------------------
     // DeleteAsync
     // -----------------------------------------------------------------------
