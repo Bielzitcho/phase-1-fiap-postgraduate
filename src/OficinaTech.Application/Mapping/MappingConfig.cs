@@ -6,8 +6,14 @@ namespace OficinaTech.Application.Mapping;
 
 public static class MappingConfig
 {
+    private static int _registered;
+
     public static void Register()
     {
+        // Idempotent: safe to call from multiple test class constructors running concurrently.
+        if (System.Threading.Interlocked.Exchange(ref _registered, 1) == 1)
+            return;
+
         TypeAdapterConfig.GlobalSettings.Scan(typeof(MappingConfig).Assembly);
 
         // Explicit rules: Value Object (TaxId) to string properties
