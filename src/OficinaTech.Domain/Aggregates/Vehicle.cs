@@ -24,9 +24,10 @@ public class Vehicle : AggregateRoot<Guid>
         Model = !string.IsNullOrWhiteSpace(model)
             ? model
             : throw new DomainException("Vehicle model cannot be empty.");
-        Year = year > 1900
+        var maxYear = DateTime.UtcNow.Year + 1;
+        Year = (year > 1900 && year <= maxYear)
             ? year
-            : throw new DomainException("Vehicle year must be valid.");
+            : throw new DomainException($"Vehicle year must be between 1901 and {maxYear}.");
     }
 
     public void UpdateDetails(string make, string model, int year)
@@ -37,9 +38,10 @@ public class Vehicle : AggregateRoot<Guid>
         Model = !string.IsNullOrWhiteSpace(model)
             ? model
             : throw new DomainException("Vehicle model cannot be empty.");
-        Year = year > 1900
+        var maxYear = DateTime.UtcNow.Year + 1;
+        Year = (year > 1900 && year <= maxYear)
             ? year
-            : throw new DomainException("Vehicle year must be valid.");
+            : throw new DomainException($"Vehicle year must be between 1901 and {maxYear}.");
     }
 
     private Vehicle() : base() { }
