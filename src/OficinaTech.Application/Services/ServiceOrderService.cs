@@ -280,20 +280,22 @@ public class ServiceOrderService : IServiceOrderService
         if (serviceType is null)
             return Result<ServiceOrderResponse>.Failure($"ServiceType {req.ServiceTypeId} not found.");
 
+        // Load client and vehicle BEFORE mutating or committing so that a missing
+        // reference never produces a Failure result after the commit has already persisted
+        // the mutation (which would leave the caller with a success-on-disk but a failure
+        // response, causing duplicate retries).
+        var client = await _clientRepo.GetByIdAsync(order.ClientId, ct);
+        if (client is null)
+            return Result<ServiceOrderResponse>.Failure($"Client {order.ClientId} not found.");
+        var vehicle = await _vehicleRepo.GetByIdAsync(order.VehicleId, ct);
+        if (vehicle is null)
+            return Result<ServiceOrderResponse>.Failure($"Vehicle {order.VehicleId} not found.");
+
         // GuardAgainstLockedStatus() is called inside AddService — throws DomainException if past EmDiagnostico
         order.AddService(serviceType.Id, serviceType.Name, serviceType.BasePrice);
 
         await _repo.UpdateAsync(order, ct);
         await _uow.CommitAsync(ct);
-
-        // Load client and vehicle for full detail projection
-        var client = await _clientRepo.GetByIdAsync(order.ClientId, ct);
-        var vehicle = await _vehicleRepo.GetByIdAsync(order.VehicleId, ct);
-
-        if (client is null)
-            return Result<ServiceOrderResponse>.Failure($"Client {order.ClientId} not found.");
-        if (vehicle is null)
-            return Result<ServiceOrderResponse>.Failure($"Vehicle {order.VehicleId} not found.");
 
         return Result<ServiceOrderResponse>.Success(ProjectResponse(order, client, vehicle));
     }
@@ -309,20 +311,19 @@ public class ServiceOrderService : IServiceOrderService
         if (part is null)
             return Result<ServiceOrderResponse>.Failure($"Part {req.PartId} not found.");
 
+        // Load client and vehicle BEFORE mutating or committing — same rationale as AddServiceAsync.
+        var client = await _clientRepo.GetByIdAsync(order.ClientId, ct);
+        if (client is null)
+            return Result<ServiceOrderResponse>.Failure($"Client {order.ClientId} not found.");
+        var vehicle = await _vehicleRepo.GetByIdAsync(order.VehicleId, ct);
+        if (vehicle is null)
+            return Result<ServiceOrderResponse>.Failure($"Vehicle {order.VehicleId} not found.");
+
         // GuardAgainstLockedStatus() is called inside AddPart — throws DomainException if past EmDiagnostico
         order.AddPart(part.Id, part.Name, part.UnitPrice, req.Quantity);
 
         await _repo.UpdateAsync(order, ct);
         await _uow.CommitAsync(ct);
-
-        // Load client and vehicle for full detail projection
-        var client = await _clientRepo.GetByIdAsync(order.ClientId, ct);
-        var vehicle = await _vehicleRepo.GetByIdAsync(order.VehicleId, ct);
-
-        if (client is null)
-            return Result<ServiceOrderResponse>.Failure($"Client {order.ClientId} not found.");
-        if (vehicle is null)
-            return Result<ServiceOrderResponse>.Failure($"Vehicle {order.VehicleId} not found.");
 
         return Result<ServiceOrderResponse>.Success(ProjectResponse(order, client, vehicle));
     }
