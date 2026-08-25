@@ -54,8 +54,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Admin:JwtIssuer"]
+                ?? throw new InvalidOperationException("Admin:JwtIssuer is required."),
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Admin:JwtAudience"]
+                ?? throw new InvalidOperationException("Admin:JwtAudience is required."),
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateLifetime = true,

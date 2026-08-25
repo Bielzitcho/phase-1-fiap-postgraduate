@@ -34,7 +34,11 @@ public class AuthController : ControllerBase
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var claims = new[] { new Claim(ClaimTypes.Role, "admin") };
 
+        var issuer = _config["Admin:JwtIssuer"] ?? "oficina-tech-api";
+        var audience = _config["Admin:JwtAudience"] ?? "oficina-tech-admin";
         var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
             signingCredentials: creds);
