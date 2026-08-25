@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OficinaTech.Application.DTOs;
 using OficinaTech.Application.Interfaces;
+using OficinaTech.Domain.Enums;
 using OficinaTech.Domain.Seedwork;
 
 namespace OficinaTech.Presentation.Controllers;
@@ -14,6 +15,41 @@ public class ServiceOrdersController : ControllerBase
     private readonly IServiceOrderService _service;
 
     public ServiceOrdersController(IServiceOrderService service) => _service = service;
+
+    // -----------------------------------------------------------------------
+    // Query endpoints (D-12, D-13) — Plan 03
+    // -----------------------------------------------------------------------
+
+    // D-12: admin filtered paged list (OS-10)
+    // Class-level [Authorize(Roles = "admin")] protects this endpoint.
+    [HttpGet]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] ServiceOrderStatus? status,
+        [FromQuery] Guid? clientId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var result = await _service.GetAllAsync(status, clientId, page, pageSize, ct);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : Problem(detail: result.Error, statusCode: 500);
+    }
+
+    // D-13: public by-client status query (OS-12)
+    // [AllowAnonymous] overrides class-level [Authorize(Roles = "admin")].
+    // Route "by-client" is a literal segment — cannot be captured by the {id:guid} route constraint.
+    [HttpGet("by-client")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetByTaxId(
+        [FromQuery] string taxId,
+        CancellationToken ct = default)
+    {
+        var result = await _service.GetByTaxIdAsync(taxId, ct);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : Problem(detail: result.Error, statusCode: 404);
+    }
 
     // -----------------------------------------------------------------------
     // CRUD endpoints (Plan 01)
