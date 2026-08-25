@@ -20,7 +20,7 @@ public class ServiceTypesController : ControllerBase
         var result = await _service.CreateAsync(req, ct);
         return result.IsSuccess
             ? CreatedAtAction(nameof(GetById), new { id = result.Value!.Id }, result.Value)
-            : Problem(detail: result.Error, statusCode: 404);
+            : Problem(detail: result.Error, statusCode: 400);
     }
 
     [HttpGet("{id:guid}")]
