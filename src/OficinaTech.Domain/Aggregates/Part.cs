@@ -41,6 +41,8 @@ public class Part : AggregateRoot<Guid>
 
     public void DecrementStock(int qty)
     {
+        if (qty <= 0)
+            throw new DomainException($"Decrement quantity must be positive. Received: {qty}.");
         if (qty > StockQuantity)
             throw new DomainException(
                 $"Insufficient stock for part '{Name}'. Available: {StockQuantity}, requested: {qty}.");

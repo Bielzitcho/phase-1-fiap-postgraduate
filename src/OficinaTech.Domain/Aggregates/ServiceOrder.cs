@@ -47,6 +47,8 @@ public class ServiceOrder : AggregateRoot<Guid>
 
     public void AddPart(Guid partId, string partName, decimal unitPrice, int quantity)
     {
+        if (quantity <= 0)
+            throw new DomainException("Part quantity must be greater than zero.");
         GuardAgainstLockedStatus();
         _orderedParts.Add(new OrderedPart(partId, partName, unitPrice, quantity));
     }
