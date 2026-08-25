@@ -84,8 +84,12 @@ using (var scope = app.Services.CreateScope())
 // Middleware pipeline — ORDER IS CRITICAL (Pitfall 5)
 app.UseExceptionHandler();   // FIRST — outermost catcher for DomainException
 
-app.MapOpenApi();
-app.MapScalarApiReference(); // INFRA-01: NOT inside IsDevelopment() — reachable in all environments
+// INFRA-01: restrict API docs to Development only to avoid leaking schema in production
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
 
 app.UseAuthentication();     // MUST come before UseAuthorization
 app.UseAuthorization();
