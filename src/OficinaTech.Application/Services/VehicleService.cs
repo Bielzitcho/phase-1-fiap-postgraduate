@@ -82,6 +82,10 @@ public class VehicleService : IVehicleService
     public async Task<Result<PagedResult<VehicleResponse>>> GetByClientAsync(
         Guid clientId, int page, int pageSize, CancellationToken ct = default)
     {
+        var client = await _clientRepo.GetByIdAsync(clientId, ct);
+        if (client is null)
+            return Result<PagedResult<VehicleResponse>>.Failure($"Client {clientId} not found.");
+
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 1;
         if (pageSize > 100) pageSize = 100;
