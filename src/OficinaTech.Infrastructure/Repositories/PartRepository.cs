@@ -12,7 +12,12 @@ public class PartRepository : IPartRepository
     public PartRepository(OficinaTechDbContext db) => _db = db;
 
     public async Task<Part?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await _db.Parts.FindAsync([id], ct);
+        // Use FirstOrDefaultAsync (not FindAsync) to always fetch a fresh snapshot from the
+        // database. FindAsync returns the already-tracked entity when it exists in the change
+        // tracker, which produces a stale concurrency token baseline in ApproveAsync — the
+        // optimistic concurrency check then operates against an outdated StockQuantity value,
+        // potentially allowing overselling under concurrent approval requests.
+        => await _db.Parts.FirstOrDefaultAsync(p => p.Id == id, ct);
 
     public async Task<(IReadOnlyList<Part> Items, int TotalCount)> GetAllAsync(
         int page, int pageSize, CancellationToken ct = default)
