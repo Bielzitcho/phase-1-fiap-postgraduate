@@ -621,4 +621,59 @@ public class ServiceOrderServiceTests
         // The repo should have been called with the digits-only normalized string
         await _clientRepo.Received(1).GetByTaxIdAsync(ValidCpfDigitsOnly, Arg.Any<CancellationToken>());
     }
+
+    // -----------------------------------------------------------------------
+    // MarkDeliveredAsync — happy path: Finalizada → Entregue, commits once (QA-01)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task MarkDeliveredAsync_OnFinalizadaOrder_TransitionsToEntregueAndCommitsOnce()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Finalizada);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+
+        var result = await _service.MarkDeliveredAsync(order.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Entregue", result.Value!.Status);
+        await _uow.Received(1).CommitAsync(Arg.Any<CancellationToken>());
+    }
+
+    // -----------------------------------------------------------------------
+    // GetByIdAsync — happy path: returns full response with client and vehicle (QA-01)
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetByIdAsync_WhenOrderExists_ReturnsFullResponseWithClientAndVehicle()
+    {
+        var client = MakeClient();
+        var vehicle = MakeVehicle(client.Id);
+        var order = MakeOrderInStatus(client.Id, vehicle.Id, ServiceOrderStatus.Recebida);
+
+        _repo.GetByIdWithIncludesAsync(order.Id, Arg.Any<CancellationToken>())
+            .Returns(order);
+        _clientRepo.GetByIdAsync(client.Id, Arg.Any<CancellationToken>())
+            .Returns(client);
+        _vehicleRepo.GetByIdAsync(vehicle.Id, Arg.Any<CancellationToken>())
+            .Returns(vehicle);
+
+        var result = await _service.GetByIdAsync(order.Id);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(order.Id, result.Value!.Id);
+        Assert.Equal("Recebida", result.Value.Status);
+    }
+
+    // ConcurrencyDomainException constructor coverage
+
+    [Fact]
+    public void ConcurrencyDomainException_Constructor_SetsMessage()
+    {
+        var ex = new OficinaTech.Domain.Seedwork.ConcurrencyDomainException("conflict message");
+        Assert.Equal("conflict message", ex.Message);
+    }
 }
