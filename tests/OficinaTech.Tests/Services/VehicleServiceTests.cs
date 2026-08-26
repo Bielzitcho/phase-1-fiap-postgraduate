@@ -194,6 +194,9 @@ public class VehicleServiceTests
     public async Task GetByClientAsync_ReturnsPagedResult()
     {
         var clientId = Guid.NewGuid();
+        var client = MakeClient();
+        _clientRepo.GetByIdAsync(clientId, Arg.Any<CancellationToken>()).Returns(client);
+
         var vehicles = new List<Vehicle>().AsReadOnly();
         _repo.GetByClientAsync(clientId, 1, 20, Arg.Any<CancellationToken>())
              .Returns(Task.FromResult(((IReadOnlyList<Vehicle>)vehicles, 0)));

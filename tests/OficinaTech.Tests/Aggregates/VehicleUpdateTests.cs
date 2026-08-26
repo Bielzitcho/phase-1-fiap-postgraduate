@@ -49,6 +49,6 @@ public class VehicleUpdateTests
     {
         var vehicle = MakeVehicle();
         var ex = Assert.Throws<DomainException>(() => vehicle.UpdateDetails("Honda", "Civic", 1900));
-        Assert.Equal("Vehicle year must be valid.", ex.Message);
+        Assert.Contains("between 1901 and", ex.Message);
     }
 }
