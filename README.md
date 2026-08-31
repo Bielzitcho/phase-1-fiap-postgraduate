@@ -1,144 +1,144 @@
 # Oficina Tech — Sistema de Gestão de Ordens de Serviço
 
-Backend REST API for auto-repair shop management. Built with .NET 10 and PostgreSQL, the system covers the full service-order lifecycle: client registration, vehicle linking, service-order creation, automatic budget generation, client approval via CPF/CNPJ, stock deduction, and status tracking from intake to delivery. The codebase follows a Domain-Driven Design layered architecture. This is an academic FIAP Phase 1 postgraduate project.
+API REST backend para gestão de oficinas mecânicas. Construída com .NET 10 e PostgreSQL, o sistema cobre o ciclo de vida completo da ordem de serviço: cadastro de clientes, vinculação de veículos, criação de OS, geração automática de orçamento, aprovação pelo cliente via CPF/CNPJ, dedução de estoque e acompanhamento de status da entrada até a entrega. O código segue uma arquitetura em camadas baseada em Domain-Driven Design. Este é um projeto acadêmico da Pós-Graduação FIAP — Fase 1.
 
 ---
 
-## Objectives
+## Objetivos
 
-- Manage the complete OS (Ordem de Serviço) lifecycle: open, diagnose, send for approval, finalize, and mark as delivered.
-- Authenticate mechanics and admins via JWT with configurable token expiry.
-- Provide admin CRUD for the four core aggregates: Clients, Vehicles, ServiceTypes, and Parts.
-- Generate automatic budgets from ordered services and parts.
-- Allow clients to approve or reject budgets using only their CPF or CNPJ (no account required).
-- Enforce stock management: decrement Part quantity on finalization with optimistic-concurrency protection.
-- Achieve >= 80% test coverage on the OficinaTech.Domain and OficinaTech.Application namespaces.
+- Gerenciar o ciclo de vida completo da OS (Ordem de Serviço): abertura, diagnóstico, envio para aprovação, finalização e entrega.
+- Autenticar mecânicos e administradores via JWT com expiração configurável.
+- Prover CRUD administrativo para os quatro agregados principais: Clientes, Veículos, Tipos de Serviço e Peças.
+- Gerar orçamentos automáticos a partir dos serviços e peças solicitados.
+- Permitir que clientes aprovem ou rejeitem orçamentos usando apenas CPF ou CNPJ (sem necessidade de cadastro).
+- Gerenciar estoque: decrementar a quantidade de Peças na finalização com proteção de concorrência otimista.
+- Atingir >= 80% de cobertura de testes nos namespaces OficinaTech.Domain e OficinaTech.Application.
 
 ---
 
-## Architecture
+## Arquitetura
 
-### Project Structure
+### Estrutura do Projeto
 
-The solution follows a four-layer DDD layout. Each layer is a separate C# project under `src/`:
+A solução segue uma organização DDD em quatro camadas. Cada camada é um projeto C# separado em `src/`:
 
-| Layer | Project | Responsibility |
-|-------|---------|----------------|
-| Domain | OficinaTech.Domain | Entities, value objects, aggregates, repository interfaces, DomainException. Zero external dependencies — no EF Core, no ASP.NET Core. |
-| Application | OficinaTech.Application | Use-case services, DTOs, IUnitOfWork interface. Orchestrates domain objects and calls repository interfaces. |
-| Infrastructure | OficinaTech.Infrastructure | EF Core DbContext, entity configurations, repository implementations, EfUnitOfWork, migrations, JWT credential service. References Application to implement IUnitOfWork. |
-| Presentation | OficinaTech.Presentation | ASP.NET Core 10 host, controllers, middleware (DomainExceptionHandler, global exception handler), Scalar UI registration, startup migrations. |
+| Camada | Projeto | Responsabilidade |
+|--------|---------|-----------------|
+| Domain | OficinaTech.Domain | Entidades, value objects, agregados, interfaces de repositório, DomainException. Zero dependências externas — sem EF Core, sem ASP.NET Core. |
+| Application | OficinaTech.Application | Serviços de casos de uso, DTOs, interface IUnitOfWork. Orquestra objetos de domínio e chama interfaces de repositório. |
+| Infrastructure | OficinaTech.Infrastructure | DbContext EF Core, configurações de entidades, implementações de repositório, EfUnitOfWork, migrações, serviço de credenciais JWT. Referencia Application para implementar IUnitOfWork. |
+| Presentation | OficinaTech.Presentation | Host ASP.NET Core 10, controllers, middlewares (DomainExceptionHandler, handler global de exceções), registro da Scalar UI, migrações automáticas na inicialização. |
 
-Tests live under `tests/OficinaTech.Tests/` (xUnit project). Integration tests use Testcontainers to spin up a real PostgreSQL container at test runtime.
+Os testes ficam em `tests/OficinaTech.Tests/` (projeto xUnit). Os testes de integração utilizam Testcontainers para subir um container PostgreSQL real em tempo de execução.
 
-### Technology Stack
+### Stack de Tecnologias
 
-| Component | Choice | Notes |
-|-----------|--------|-------|
+| Componente | Escolha | Observações |
+|------------|---------|-------------|
 | Runtime | .NET 10 / ASP.NET Core 10 | Target framework net10.0 |
-| Database | PostgreSQL 16 (Docker) | Managed via EF Core + Npgsql |
-| ORM | Entity Framework Core 10.0.11 | Code-first migrations, auto-applied on startup |
-| Auth | JWT Bearer | 15-min default expiry (configurable via `Admin__JwtExpiryMinutes`) |
-| API Docs | Scalar at /scalar | Replaces Swashbuckle (removed in .NET 9+) |
-| Mapping | Mapster 10 | MIT license; faster than AutoMapper |
-| Testing | xUnit 2.9.3 + NSubstitute 6.2 + Testcontainers | Unit + integration tests |
-| SAST | Security Code Scan | Run via `security-scan OficinaTech.sln`; 0 warnings on current solution |
+| Banco de Dados | PostgreSQL 16 (Docker) | Gerenciado via EF Core + Npgsql |
+| ORM | Entity Framework Core 10.0.4 | Migrações code-first, aplicadas automaticamente na inicialização |
+| Autenticação | JWT Bearer | Expiração padrão de 15 min (configurável via `Admin__JwtExpiryMinutes`) |
+| Docs da API | Scalar em /scalar | Substitui Swashbuckle (removido no .NET 9+) |
+| Mapeamento | Mapster 10 | Licença MIT; mais rápido que AutoMapper |
+| Testes | xUnit 2.9.3 + NSubstitute 6.2 + Testcontainers | Testes unitários + integração |
+| SAST | Security Code Scan | Executado via `security-scan OficinaTech.sln`; 0 avisos na solução atual |
 
 ---
 
-## Prerequisites
+## Pré-requisitos
 
-- **Docker Desktop >= 20.x** (or Rancher Desktop) — required for the quick-start path
-- **.NET SDK 10.0.400 or later** — required for the manual setup path
+- **Docker Desktop >= 20.x** (ou Rancher Desktop) — necessário para o caminho de início rápido
+- **.NET SDK 10.0.400 ou superior** — necessário para o caminho de configuração manual
   - macOS: `brew install dotnet`
-  - Other: https://dotnet.microsoft.com/download
+  - Outros: https://dotnet.microsoft.com/download
 - **Git**
 
 ---
 
-## Quick Start (Docker Compose — 5 minutes)
+## Início Rápido (Docker Compose — 5 minutos)
 
-This path requires only Docker Desktop. No local .NET SDK installation needed.
+Este caminho requer apenas o Docker Desktop. Não é necessário instalar o .NET SDK localmente.
 
-1. Clone the repository:
+1. Clone o repositório:
 
    ```bash
-   git clone <repo-url> && cd phase-1-fiap-postgraduate
+   git clone https://github.com/Bielzitcho/phase-1-fiap-postgraduate && cd phase-1-fiap-postgraduate
    ```
 
-2. Set the required secrets and start all containers:
+2. Defina os segredos necessários e inicie todos os containers:
 
    ```bash
    docker compose up --build
    ```
 
-   > The `api` service requires `Admin__PasswordHash` and `Admin__JwtSecret` to be set. For local development, edit `docker-compose.yml` and replace the placeholder values before running. See the environment variable reference below.
+   > O serviço `api` requer que `Admin__PasswordHash` e `Admin__JwtSecret` estejam definidos. Para desenvolvimento local, edite `docker-compose.yml` e substitua os valores de placeholder antes de executar. Consulte a referência de variáveis de ambiente abaixo.
 
-3. Wait for the following line in the container logs:
+3. Aguarde a seguinte linha nos logs do container:
 
    ```
    Now listening on: http://0.0.0.0:8080
    ```
 
-   EF Core migrations run automatically on startup. No manual migration step is needed.
+   As migrações do EF Core são executadas automaticamente na inicialização. Nenhuma etapa manual de migração é necessária.
 
-4. Open Scalar UI to browse and test all endpoints:
+4. Abra a Scalar UI para navegar e testar todos os endpoints:
 
    ```
    http://localhost:8080/scalar
    ```
 
-5. Authenticate — send a POST request to obtain a JWT token:
+5. Autentique-se — envie uma requisição POST para obter um token JWT:
 
    ```bash
    curl -s -X POST http://localhost:8080/api/auth/login \
      -H "Content-Type: application/json" \
-     -d '{"email":"admin@oficina.tech","password":"<your-admin-password>"}'
+     -d '{"email":"admin@oficina.tech","password":"<sua-senha-admin>"}'
    ```
 
-   The response body contains a `token` field. Copy that value.
+   O corpo da resposta contém um campo `token`. Copie esse valor.
 
-6. Use the token in Scalar (click "Authorize") or in any HTTP client as a Bearer header:
+6. Use o token na Scalar (clique em "Authorize") ou em qualquer cliente HTTP como header Bearer:
 
    ```
    Authorization: Bearer <token>
    ```
 
-### Environment Variable Reference (docker-compose.yml)
+### Referência de Variáveis de Ambiente (docker-compose.yml)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ConnectionStrings__DefaultConnection` | Yes | PostgreSQL connection string |
-| `Admin__Email` | Yes | Admin login e-mail |
-| `Admin__PasswordHash` | Yes | BCrypt hash of the admin password (min cost 12) |
-| `Admin__JwtSecret` | Yes | HMAC-SHA256 signing key (min 32 characters enforced at startup) |
-| `Admin__JwtExpiryMinutes` | No | Token lifetime in minutes (default: 15) |
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `ConnectionStrings__DefaultConnection` | Sim | String de conexão PostgreSQL |
+| `Admin__Email` | Sim | E-mail de login do administrador |
+| `Admin__PasswordHash` | Sim | Hash BCrypt da senha do admin (custo mínimo 12) |
+| `Admin__JwtSecret` | Sim | Chave de assinatura HMAC-SHA256 (mínimo 32 caracteres, verificado na inicialização) |
+| `Admin__JwtExpiryMinutes` | Não | Tempo de vida do token em minutos (padrão: 15) |
 
 ---
 
-## Manual Setup (Without Docker)
+## Configuração Manual (Sem Docker)
 
-Only required for local development without containerizing the API.
+Necessário apenas para desenvolvimento local sem containerizar a API.
 
-1. Start PostgreSQL (Docker for the database only):
+1. Inicie o PostgreSQL (Docker apenas para o banco de dados):
 
    ```bash
    docker compose up -d postgres
    ```
 
-2. Export the connection string:
+2. Exporte a string de conexão:
 
    ```bash
    export ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=oficina_tech;Username=oficina;Password=oficina_secret"
    ```
 
-3. Install the EF Core CLI tool (if not already installed):
+3. Instale a ferramenta CLI do EF Core (se ainda não estiver instalada):
 
    ```bash
    dotnet tool restore
    ```
 
-4. Apply migrations:
+4. Aplique as migrações:
 
    ```bash
    dotnet ef database update \
@@ -146,116 +146,119 @@ Only required for local development without containerizing the API.
      --startup-project src/OficinaTech.Infrastructure
    ```
 
-5. Run the API:
+5. Execute a API:
 
    ```bash
    dotnet run --project src/OficinaTech.Presentation
    ```
 
-6. The API is available at the port shown in the console output (typically `http://localhost:5000`).
+6. A API estará disponível na porta exibida no console (geralmente `http://localhost:5000`).
 
 ---
 
-## API Reference
+## Referência da API
 
-All endpoints are also documented interactively at `http://localhost:8080/scalar`.
+Todos os endpoints também estão documentados de forma interativa em `http://localhost:8080/scalar`.
 
-### Authentication
+### Autenticação
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | /api/auth/login | Body: `{"email":"…","password":"…"}` — Returns `{"token":"…"}` |
+| Método | Caminho | Descrição |
+|--------|---------|-----------|
+| POST | /api/auth/login | Body: `{"email":"…","password":"…"}` — Retorna `{"token":"…"}` |
 
-### Admin Endpoints (JWT required)
+### Endpoints Administrativos (JWT obrigatório)
 
-All admin endpoints require the `Authorization: Bearer <token>` header.
+Todos os endpoints administrativos requerem o header `Authorization: Bearer <token>`.
 
-| Resource | Base Path | Key Operations |
-|----------|-----------|----------------|
-| Clients | /api/clients | GET (list, filter by taxId), GET /{id}, POST, PUT /{id}, DELETE /{id} |
-| Vehicles | /api/vehicles | GET (list), GET /{id}, POST, PUT /{id}, DELETE /{id} |
-| Vehicles by client | /api/clients/{clientId}/vehicles | GET — list vehicles owned by a specific client |
-| Service Types | /api/service-types | GET (list), GET /{id}, POST, PUT /{id}, DELETE /{id} |
-| Parts | /api/parts | GET (list), GET /{id}, POST, PUT /{id}, DELETE /{id} |
-| Service Orders | /api/service-orders | GET (list), GET /{id}, POST, PUT /{id} |
+| Recurso | Caminho Base | Operações Principais |
+|---------|-------------|---------------------|
+| Clientes | /api/clients | GET (lista, filtro por taxId), GET /{id}, POST, PUT /{id}, DELETE /{id} |
+| Veículos | /api/vehicles | GET (lista), GET /{id}, POST, PUT /{id}, DELETE /{id} |
+| Veículos por cliente | /api/clients/{clientId}/vehicles | GET — lista veículos de um cliente específico |
+| Tipos de Serviço | /api/service-types | GET (lista), GET /{id}, POST, PUT /{id}, DELETE /{id} |
+| Peças | /api/parts | GET (lista), GET /{id}, POST, PUT /{id}, DELETE /{id} |
+| Ordens de Serviço | /api/service-orders | GET (lista), GET /{id}, POST, PUT /{id} |
 
-OS lifecycle state-transition endpoints:
+Endpoints de transição de status da OS:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | /api/service-orders/{id}/start-diagnosis | Move OS from Received to InDiagnosis |
-| POST | /api/service-orders/{id}/send-for-approval | Move OS from InDiagnosis to AwaitingApproval |
-| POST | /api/service-orders/{id}/approve | (Admin path) Force-approve an OS |
-| POST | /api/service-orders/{id}/finalize | Move approved OS to Completed; decrements stock |
-| POST | /api/service-orders/{id}/mark-delivered | Move completed OS to Delivered |
+| Método | Caminho | Descrição |
+|--------|---------|-----------|
+| POST | /api/service-orders/{id}/start-diagnosis | Move a OS de Recebida para EmDiagnostico |
+| POST | /api/service-orders/{id}/send-for-approval | Move a OS de EmDiagnostico para AguardandoAprovacao |
+| POST | /api/service-orders/{id}/approve | (Rota admin) Aprova forçadamente uma OS |
+| POST | /api/service-orders/{id}/finalize | Move a OS aprovada para Finalizada; decrementa estoque |
+| POST | /api/service-orders/{id}/mark-delivered | Move a OS finalizada para Entregue |
 
-### Public Endpoints (no authentication required)
+### Endpoints Públicos (sem autenticação)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | /api/service-orders/{id}/approve | Client approves (or rejects) a budget using CPF/CNPJ — body: `{"taxId":"…","approved":true}` |
-| GET | /api/service-orders/by-client?taxId={taxId} | Client queries own OS list by CPF or CNPJ |
+| Método | Caminho | Descrição |
+|--------|---------|-----------|
+| POST | /api/service-orders/{id}/approve | Cliente aprova (ou rejeita) um orçamento usando CPF/CNPJ — body: `{"taxId":"…","approved":true}` |
+| GET | /api/service-orders/by-client?taxId={taxId} | Cliente consulta sua lista de OS por CPF ou CNPJ |
 
 ---
 
-## Running Tests
+## Executando os Testes
 
 ```bash
-# Unit tests only (fast — no Docker required)
+# Apenas testes unitários (rápido — não requer Docker)
 dotnet test tests/OficinaTech.Tests/OficinaTech.Tests.csproj
 
-# Unit tests with coverage report (namespace-filtered)
+# Testes unitários com relatório de cobertura (filtrado por namespace)
 dotnet test tests/OficinaTech.Tests/OficinaTech.Tests.csproj \
   --settings coverlet.runsettings \
   --results-directory TestResults/
 
-# Full suite including integration tests (requires Docker Desktop running)
+# Suite completa incluindo testes de integração (requer Docker Desktop em execução)
 dotnet test tests/OficinaTech.Tests/OficinaTech.Tests.csproj
 ```
 
-Current coverage: >= 80% on OficinaTech.Domain and OficinaTech.Application namespaces.
+Cobertura atual: >= 80% nos namespaces OficinaTech.Domain e OficinaTech.Application.
 
-Coverage reports are written to `TestResults/` in Cobertura XML format. Open `TestResults/coverage.cobertura.xml` with any Cobertura-compatible viewer (e.g., ReportGenerator).
+Os relatórios de cobertura são gravados em `TestResults/` no formato Cobertura XML. Abra `TestResults/coverage.cobertura.xml` com qualquer visualizador compatível com Cobertura (ex: ReportGenerator).
 
 ---
 
-## Security
+## Segurança
 
-- JWT secret is configured via `Admin__JwtSecret` (minimum 32 characters enforced at startup; startup fails if shorter).
-- Admin password is stored as a BCrypt hash (`Admin__PasswordHash`); the plaintext password is never persisted.
-- The login endpoint returns a single generic error on wrong email or wrong password to prevent account enumeration.
-- SAST scan via Security Code Scan:
+- O segredo JWT é configurado via `Admin__JwtSecret` (mínimo de 32 caracteres verificado na inicialização; a aplicação falha ao iniciar se for menor).
+- A senha do admin é armazenada como hash BCrypt (`Admin__PasswordHash`); a senha em texto puro nunca é persistida.
+- O endpoint de login retorna um erro genérico tanto para e-mail quanto para senha incorretos, prevenindo enumeração de contas.
+- Varredura SAST via Security Code Scan:
 
   ```bash
   security-scan OficinaTech.sln --export docs/security-report.sarif
   ```
 
-- Dependency CVE scan:
+- Varredura de CVEs em dependências:
 
   ```bash
   dotnet list package --vulnerable --include-transitive
   ```
 
-- Current findings: 0 critical, 0 CVEs. See `docs/security-report.sarif` and `docs/vulnerability-report.txt`.
+- Resultado atual: 0 críticos, 0 CVEs. Consulte `docs/security-report.sarif` e `docs/vulnerability-report.txt`.
 
 ---
 
-## Domain Glossary (Ubiquitous Language)
+## Glossário do Domínio (Linguagem Ubíqua)
 
-| Term (PT) | Term (EN) | Definition |
-|-----------|-----------|------------|
-| Ordem de Serviço (OS) | Service Order | Central aggregate; tracks the entire repair workflow for one vehicle visit |
-| Orçamento | Budget | Auto-calculated total from ordered services and parts; sent to client for approval |
-| TaxId | TaxId | CPF (individual) or CNPJ (legal entity) value object; validated by check-digit algorithm |
-| Placa | License Plate | Value object accepting old (ABC-1234) and Mercosul (ABC1D23) formats |
-| Aprovação | Approval | Client action (approve or reject) that unblocks or cancels OS execution |
-| Peça | Part | Inventory item with stock quantity; decremented on OS finalization |
-| Tipo de Serviço | Service Type | Named service with a price and average execution-time tracker |
+| Termo (PT) | Termo (EN) | Definição |
+|------------|------------|-----------|
+| Ordem de Serviço (OS) | Service Order | Agregado central; rastreia todo o fluxo de reparo de uma visita de veículo |
+| Orçamento | Budget | Total calculado automaticamente a partir dos serviços e peças solicitados; enviado ao cliente para aprovação |
+| TaxId | TaxId | CPF (pessoa física) ou CNPJ (pessoa jurídica) como value object; validado pelo algoritmo de dígito verificador |
+| Placa | License Plate | Value object que aceita os formatos antigo (ABC-1234) e Mercosul (ABC1D23) |
+| Aprovação | Approval | Ação do cliente (aprovar ou rejeitar) que desbloqueia ou cancela a execução da OS |
+| Peça | Part | Item de inventário com quantidade em estoque; decrementado na finalização da OS |
+| Tipo de Serviço | Service Type | Serviço nomeado com preço e rastreador de tempo médio de execução |
 
 ---
 
-## Group and Submission (FIAP)
+## Grupo e Entrega (FIAP)
 
-Grupo: [nome do grupo] | Participantes: [lista] | Discord: [usernames] | Repositório: [link] | Documentação: [Miro Board link]
+- **Repositório:** https://github.com/Bielzitcho/phase-1-fiap-postgraduate
+- **Diagramas C4 (Excalidraw):** https://excalidraw.com/#json=D1HIPRYUUIh4oYgBQ5QFf,M6YFtZdQGnkw1_VWbvbVCQ
+- **Event Storming (Miro):** https://miro.com/app/board/uXjVHsplP2M=/?share_link_id=834450438055
+- **Grupo:** [nome do grupo] | **Participantes:** [lista] | **Discord:** [usernames] | **Vídeo:** [link]
 
-> This section is completed by the team before PDF submission.
+> Esta seção deve ser completada pelo grupo antes da submissão do PDF.
