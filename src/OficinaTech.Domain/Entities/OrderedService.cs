@@ -5,7 +5,7 @@ namespace OficinaTech.Domain.Entities;
 public class OrderedService : Entity<Guid>
 {
     public Guid ServiceTypeId { get; private set; }
-    public string ServiceTypeName { get; private set; }
+    public string ServiceTypeName { get; private set; } = null!;
     public decimal UnitPrice { get; private set; }  // price snapshot — frozen at add-time
 
     public OrderedService(Guid serviceTypeId, string serviceTypeName, decimal unitPrice)

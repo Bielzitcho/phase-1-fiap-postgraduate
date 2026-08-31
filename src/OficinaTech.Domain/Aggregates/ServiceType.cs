@@ -4,7 +4,7 @@ namespace OficinaTech.Domain.Aggregates;
 
 public class ServiceType : AggregateRoot<Guid>
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
     public decimal BasePrice { get; private set; }
     public string? Description { get; private set; }
 

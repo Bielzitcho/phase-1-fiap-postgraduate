@@ -5,7 +5,7 @@ namespace OficinaTech.Domain.Entities;
 public class OrderedPart : Entity<Guid>
 {
     public Guid PartId { get; private set; }
-    public string PartName { get; private set; }
+    public string PartName { get; private set; } = null!;
     public decimal UnitPrice { get; private set; }  // price snapshot — frozen at add-time
     public int Quantity { get; private set; }
 

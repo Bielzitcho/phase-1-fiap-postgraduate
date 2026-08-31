@@ -5,11 +5,11 @@ namespace OficinaTech.Domain.Aggregates;
 
 public class Client : AggregateRoot<Guid>
 {
-    public string Name { get; private set; }
-    public TaxId TaxId { get; private set; }
-    public string Email { get; private set; }
-    public string Phone { get; private set; }
-    public string Address { get; private set; }
+    public string Name { get; private set; } = null!;
+    public TaxId TaxId { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
+    public string Phone { get; private set; } = null!;
+    public string Address { get; private set; } = null!;
 
     public Client(string name, TaxId taxId, string email, string phone, string address)
         : base(Guid.NewGuid())

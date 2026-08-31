@@ -5,7 +5,7 @@ namespace OficinaTech.Domain.Aggregates;
 
 public class Part : AggregateRoot<Guid>
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
     public decimal UnitPrice { get; private set; }
     [ConcurrencyCheck]
     public int StockQuantity { get; private set; }

@@ -93,6 +93,7 @@ public class ServiceOrder : AggregateRoot<Guid>
         // Idempotent guard: order is already in EmExecucao — no status change required.
     }
 
+#pragma warning disable CS0465
     public void Finalize()
     {
         if (Status != ServiceOrderStatus.EmExecucao)
@@ -103,6 +104,7 @@ public class ServiceOrder : AggregateRoot<Guid>
         // serviceType.RecordExecution(FinalizationDate.Value - CreatedAt)
         // for each ordered service. Domain raises event in Phase 4.
     }
+#pragma warning restore CS0465
 
     public void MarkDelivered()
     {

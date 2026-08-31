@@ -6,9 +6,9 @@ namespace OficinaTech.Domain.Aggregates;
 public class Vehicle : AggregateRoot<Guid>
 {
     public Guid ClientId { get; private set; }
-    public LicensePlate LicensePlate { get; private set; }
-    public string Make { get; private set; }
-    public string Model { get; private set; }
+    public LicensePlate LicensePlate { get; private set; } = null!;
+    public string Make { get; private set; } = null!;
+    public string Model { get; private set; } = null!;
     public int Year { get; private set; }
 
     public Vehicle(Guid clientId, LicensePlate licensePlate, string make, string model, int year)

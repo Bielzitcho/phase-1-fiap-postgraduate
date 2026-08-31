@@ -31,7 +31,7 @@ public class VehicleService : IVehicleService
             return Result<VehicleResponse>.Failure($"A vehicle with license plate '{req.LicensePlate}' already exists.");
 
         // LicensePlate VO validates format; DomainException propagates to global handler (D-06)
-        var vehicle = new Vehicle(req.ClientId, new LicensePlate(req.LicensePlate), req.Make, req.Model, req.Year);
+        var vehicle = new Vehicle(req.ClientId, new LicensePlate(req.LicensePlate!), req.Make, req.Model, req.Year);
         await _repo.AddAsync(vehicle, ct);
         await _uow.CommitAsync(ct);
         return Result<VehicleResponse>.Success(vehicle.Adapt<VehicleResponse>());
