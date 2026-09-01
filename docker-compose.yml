@@ -19,6 +19,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=oficina_tech;Username=oficina;Password=oficina_secret
       - Admin__Email=admin@oficina.tech
       - Admin__PasswordHash=REPLACE_WITH_BCRYPT_HASH
