@@ -19,6 +19,7 @@ public class ServiceOrderRepository : IServiceOrderRepository
         => await _db.ServiceOrders
             .Include("_orderedServices")
             .Include("_orderedParts")
+            .AsSplitQuery()
             .FirstOrDefaultAsync(o => o.Id == id, ct);
 
     public async Task<(IReadOnlyList<ServiceOrder> Items, int TotalCount)> GetAllAsync(
@@ -32,15 +33,31 @@ public class ServiceOrderRepository : IServiceOrderRepository
             .OrderByDescending(o => o.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
+            // Load the child collections so ServiceOrder.TotalAmount (computed from them) is not 0.
+            // AsSplitQuery avoids the cartesian blow-up of joining two collections in one query.
+            .Include("_orderedServices")
+            .Include("_orderedParts")
+            .AsSplitQuery()
             .ToListAsync(ct);
         return (items, total);
     }
 
     public async Task<IReadOnlyList<ServiceOrder>> GetByClientIdAsync(Guid clientId, CancellationToken ct = default)
-        => await _db.ServiceOrders.Where(o => o.ClientId == clientId).ToListAsync(ct);
+        => await _db.ServiceOrders
+            .Where(o => o.ClientId == clientId)
+            // Same rationale as GetAllAsync: TotalAmount is computed from the child collections.
+            .Include("_orderedServices")
+            .Include("_orderedParts")
+            .AsSplitQuery()
+            .ToListAsync(ct);
 
     public async Task<IReadOnlyList<ServiceOrder>> GetByStatusAsync(ServiceOrderStatus status, CancellationToken ct = default)
-        => await _db.ServiceOrders.Where(o => o.Status == status).ToListAsync(ct);
+        => await _db.ServiceOrders
+            .Where(o => o.Status == status)
+            .Include("_orderedServices")
+            .Include("_orderedParts")
+            .AsSplitQuery()
+            .ToListAsync(ct);
 
     public async Task AddAsync(ServiceOrder serviceOrder, CancellationToken ct = default)
         => await _db.ServiceOrders.AddAsync(serviceOrder, ct);
