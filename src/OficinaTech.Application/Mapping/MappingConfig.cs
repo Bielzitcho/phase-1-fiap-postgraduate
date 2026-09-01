@@ -11,7 +11,7 @@ public static class MappingConfig
     public static void Register()
     {
         // Idempotent: safe to call from multiple test class constructors running concurrently.
-        if (System.Threading.Interlocked.Exchange(ref _registered, 1) == 1)
+        if (Interlocked.Exchange(ref _registered, 1) == 1)
             return;
 
         TypeAdapterConfig.GlobalSettings.Scan(typeof(MappingConfig).Assembly);

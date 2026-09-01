@@ -22,7 +22,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=oficina_tech;Username=oficina;Password=oficina_secret
       - Admin__Email=admin@oficina.tech
-      - Admin__PasswordHash=$2a$11$LH6vF4jH.IUgMeHC9324Xe.AiaauQ7.ewUgedeygXqd4L/XG0CJK6
+      - Admin__PasswordHash=$$2a$$11$$LH6vF4jH.IUgMeHC9324Xe.AiaauQ7.ewUgedeygXqd4L/XG0CJK6
       - Admin__JwtSecret=oficina-tech-jwt-secret-key-fiap-2026
       - Admin__JwtIssuer=oficina-tech-api
       - Admin__JwtAudience=oficina-tech-admin
