@@ -8,7 +8,7 @@ COPY src/OficinaTech.Application/OficinaTech.Application.csproj src/OficinaTech.
 COPY src/OficinaTech.Infrastructure/OficinaTech.Infrastructure.csproj src/OficinaTech.Infrastructure/
 COPY src/OficinaTech.Presentation/OficinaTech.Presentation.csproj src/OficinaTech.Presentation/
 COPY tests/OficinaTech.Tests/OficinaTech.Tests.csproj tests/OficinaTech.Tests/
-RUN dotnet restore src/OficinaTech.Presentation/OficinaTech.Presentation.csproj
+RUN dotnet restore OficinaTech.sln
 
 # Build and publish
 COPY . .
