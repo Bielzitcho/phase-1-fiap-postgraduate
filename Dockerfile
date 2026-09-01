@@ -13,7 +13,7 @@ RUN dotnet restore OficinaTech.sln
 # Build and publish
 COPY . .
 RUN dotnet publish src/OficinaTech.Presentation/OficinaTech.Presentation.csproj \
-    -c Release -o /app --no-restore
+    -c Release -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
