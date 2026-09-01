@@ -17,8 +17,8 @@ public class ServiceOrderRepository : IServiceOrderRepository
 
     public async Task<ServiceOrder?> GetByIdWithIncludesAsync(Guid id, CancellationToken ct = default)
         => await _db.ServiceOrders
-            .Include(o => o.OrderedServices)
-            .Include(o => o.OrderedParts)
+            .Include("_orderedServices")
+            .Include("_orderedParts")
             .FirstOrDefaultAsync(o => o.Id == id, ct);
 
     public async Task<(IReadOnlyList<ServiceOrder> Items, int TotalCount)> GetAllAsync(
