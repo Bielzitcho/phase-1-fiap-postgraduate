@@ -42,7 +42,7 @@ Os testes ficam em `tests/OficinaTech.Tests/` (projeto xUnit). Os testes de inte
 | Docs da API | Scalar em /scalar | Substitui Swashbuckle (removido no .NET 9+) |
 | Mapeamento | Mapster 10 | Licença MIT; mais rápido que AutoMapper |
 | Testes | xUnit 2.9.3 + NSubstitute 6.2 + Testcontainers | Testes unitários + integração |
-| SAST | Security Code Scan | Executado via `security-scan OficinaTech.sln`; 0 avisos na solução atual |
+| SAST | Security Code Scan | Executado via `security-scan` (ver seção Segurança); 0 avisos na solução atual |
 
 ---
 
@@ -224,10 +224,16 @@ Os relatórios de cobertura são gravados em `TestResults/` no formato Cobertura
 - O segredo JWT é configurado via `Admin__JwtSecret` (mínimo de 32 caracteres verificado na inicialização; a aplicação falha ao iniciar se for menor).
 - A senha do admin é armazenada como hash BCrypt (`Admin__PasswordHash`); a senha em texto puro nunca é persistida.
 - O endpoint de login retorna um erro genérico tanto para e-mail quanto para senha incorretos, prevenindo enumeração de contas.
-- Varredura SAST via Security Code Scan:
+- Varredura SAST via Security Code Scan. A ferramenta (`security-scan` 5.6.7) é compilada para .NET 6; em máquinas apenas com runtimes mais novos, defina `DOTNET_ROLL_FORWARD=LatestMajor` para que ela rode sobre o .NET instalado:
 
   ```bash
-  security-scan OficinaTech.sln --export docs/security-report.sarif
+  # Linux/macOS
+  DOTNET_ROLL_FORWARD=LatestMajor security-scan OficinaTech.sln --export docs/security-report.sarif
+  ```
+
+  ```powershell
+  # Windows (PowerShell)
+  $env:DOTNET_ROLL_FORWARD = "LatestMajor"; security-scan OficinaTech.sln --export docs/security-report.sarif
   ```
 
 - Varredura de CVEs em dependências:
