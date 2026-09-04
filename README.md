@@ -265,6 +265,6 @@ Os relatórios de cobertura são gravados em `TestResults/` no formato Cobertura
 - **Repositório:** https://github.com/Bielzitcho/phase-1-fiap-postgraduate
 - **Diagramas C4 (Excalidraw):** https://excalidraw.com/#json=D1HIPRYUUIh4oYgBQ5QFf,M6YFtZdQGnkw1_VWbvbVCQ
 - **Event Storming (Miro):** https://miro.com/app/board/uXjVHsplP2M=/?share_link_id=834450438055
-- **Grupo:** [nome do grupo] | **Participantes:** [lista] | **Discord:** [usernames] | **Vídeo:** [link]
+- **Grupo:** Grupo 151 | **Participantes:** Gabriel Arthur de Medeiros Freitas | **Discord:** Bielzitcho 
 
-> Esta seção deve ser completada pelo grupo antes da submissão do PDF.
+
